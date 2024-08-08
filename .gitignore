@@ -1,8 +1,9 @@
 # Compiler files
-# cache/
-# out/
-# artifacts/
-# cache_hardhat/
+cache/
+out/
+artifacts/
+cache_hardhat/
+crytic-export/
 
 # Ignores development broadcast logs
 !/broadcast
@@ -16,7 +17,7 @@ docs/
 .env
 
 .history/
-# lib/
+lib/
 node_modules/
 
 *.lock

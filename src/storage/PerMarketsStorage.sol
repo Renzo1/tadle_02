@@ -34,4 +34,10 @@ contract PerMarketsStorage is UpgradeableStorage {
     /// See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
     /// start from slot 54, end at slot 149
     uint256[96] private __gap;
+
+    // Note auditor added extra variables for harnessing data
+    address[] public offerAddresses;
+    address[] public stockAddresses;
+    address[] public makerAddresses;
+
 }

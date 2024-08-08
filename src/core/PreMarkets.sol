@@ -154,6 +154,11 @@ contract PreMarktes is PerMarketsStorage, Rescuable, Related, IPerMarkets {
             params.points,
             params.amount
         );
+
+        // NOTE Auditors Harness
+        offerAddresses.push(offerAddr);
+        stockAddresses.push(stockAddr);
+        makerAddresses.push(makerAddr);
     }
 
     /**
@@ -281,6 +286,9 @@ contract PreMarktes is PerMarketsStorage, Rescuable, Related, IPerMarkets {
             tradeTax,
             remainingPlatformFee
         );
+
+        // NOTE Auditors Harness
+        stockAddresses.push(stockAddr);
     }
 
     /**
@@ -946,5 +954,21 @@ contract PreMarktes is PerMarketsStorage, Rescuable, Related, IPerMarkets {
                 _depositAmount
             );
         }
+    }
+
+
+
+    ///////////////// Harnesses /////////////////
+
+    function getOfferAddresses() public view returns (address[] memory) {
+        return offerAddresses;
+    }
+
+    function getStockAddresses() public view returns (address[] memory) {
+        return stockAddresses;
+    }
+
+    function getMakerAddresses() public view returns (address[] memory) {
+        return makerAddresses;
     }
 }

@@ -69,6 +69,10 @@ contract WETH9 {
 
         return true;
     }
+
+    // function balanceOf(address account) public view virtual returns (uint256) {
+    //   return _balances[account];
+    // }
 }
 
 /*

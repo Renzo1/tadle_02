@@ -260,4 +260,12 @@ contract TokenManager is
             revert TransferFailed();
         }
     }
+
+
+    /////////////////// AUDIT HARNESS //////////////////////////
+    function getClaimableAmount(address _tokenAddress, TokenBalanceType _tokenBalanceType) external view returns (uint256) {
+        uint256 claimAbleAmount = userTokenBalanceMap[_msgSender()][_tokenAddress][_tokenBalanceType];
+
+        return claimAbleAmount;
+    }
 }

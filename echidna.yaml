@@ -1,0 +1,20 @@
+
+testMode: "assertion"
+# testMode: "property"
+prefix: "crytic_"
+coverage: true
+corpusDir: "echidna"
+balanceAddr: 0x1043561a8829300000
+balanceContract: 0x1043561a8829300000
+filterFunctions: []
+cryticArgs: ["--foundry-compile-all"]
+cryticArgs: ["--foundry-compile-all"]
+codeSize: 0xffffffff
+testLimit: 100000000
+# maxTimeDelay: 172800
+
+sender: [
+  "0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf",
+  "0x2B5AD5c4795c026514f8317c7a215E218DcCD6cF",
+  "0x6813Eb9362372EEF6200f3b1dbC3f819671cBA69"
+  ]
