@@ -38,16 +38,15 @@ abstract contract Properties is Setup, Asserts {
 
     // @invariant trade Tax of an offer must always be greater than EACH_TRADE_TAX_DECIMAL_SCALER
     function crytic_tradeTaxOfOfferLessThanEACH_TRADE_TAX_DECIMAL_SCALER() public returns (bool) {
-        bool returnData = true;
         address[] memory offerAddress = preMarktes.getOfferAddresses();
 
         for (uint256 i = 0; i < offerAddress.length; i++) {
             OfferInfo memory offerInfo = preMarktes.getOfferInfo(offerAddress[i]);
             if (offerInfo.tradeTax > Constants.EACH_TRADE_TAX_DECIMAL_SCALER) {
-                returnData = false;
+                return false;
             }
         }
-        return returnData;
+        return true;
     }
 
     struct MarketplaceOneOffersTrackerBefore {
@@ -63,7 +62,6 @@ abstract contract Properties is Setup, Asserts {
 
     // @invariant the offers for a market should not increase when the market status is not online
     function crytic_offersNotIncreaseWhenMarketIsNotOnline_One() public returns (bool) {
-        bool returnData = true;
         uint256 id = 0;
         MarketplaceOneOffersTrackerAfter memory marketplaceOneOffersTrackerAfter;
 
@@ -73,12 +71,12 @@ abstract contract Properties is Setup, Asserts {
         bool isMarketOnline = marketplaceOneOffersTrackerAfter.marketPlaceInfo.status == MarketPlaceStatus.Online;
 
         if (!isMarketOnline && marketplaceOneOffersTrackerBefore.marketplaceOneOffers.length != marketplaceOneOffersTrackerAfter.marketplaceOneOffers.length) {
-            returnData = false;
+            return false;
         }
 
         marketplaceOneOffersTrackerBefore.marketplaceOneOffers = getOffersForMarketplace(MARKETS[id]);
         marketplaceOneOffersTrackerBefore.marketPlaceInfo = systemConfig.getMarketPlaceInfo(MARKETS[id]);
-        return returnData;
+        return true;
     }
 
 
