@@ -3,18 +3,18 @@
 pragma solidity ^0.8.0;
 
 import {Test} from "forge-std/Test.sol";
-import {TargetFunctions} from "./TargetFunctions.sol";
+import {TargetFunctions} from "../TargetFunctions.sol";
 import {FoundryAsserts} from "@chimera/FoundryAsserts.sol";
 
-import {OfferStatus, StockStatus, AbortOfferStatus, OfferType, StockType, OfferSettleType} from "../src/storage/OfferStatus.sol";
-import {IPerMarkets, OfferInfo, StockInfo, MakerInfo, CreateOfferParams} from "../src/interfaces/IPerMarkets.sol";
-import {TokenBalanceType, ITokenManager} from "../src/interfaces/ITokenManager.sol";
-import {ISystemConfig, ReferralInfo, MarketPlaceInfo, MarketPlaceStatus} from "../src/interfaces/ISystemConfig.sol";
+import {OfferStatus, StockStatus, AbortOfferStatus, OfferType, StockType, OfferSettleType} from "../../src/storage/OfferStatus.sol";
+import {IPerMarkets, OfferInfo, StockInfo, MakerInfo, CreateOfferParams} from "../../src/interfaces/IPerMarkets.sol";
+import {TokenBalanceType, ITokenManager} from "../../src/interfaces/ITokenManager.sol";
+import {ISystemConfig, ReferralInfo, MarketPlaceInfo, MarketPlaceStatus} from "../../src/interfaces/ISystemConfig.sol";
 
-import {MockERC20} from "./mocks/MockERC20.sol";
-import {WETH9} from "./mocks/WETH9.sol";
+import {MockERC20} from "../mocks/MockERC20.sol";
+import {WETH9} from "../mocks/WETH9.sol";
 
-contract CryticToFoundry is Test, TargetFunctions, FoundryAsserts {
+contract PoCTemplate is Test, TargetFunctions, FoundryAsserts {
     address internal user;
 
     function setUp() public {
@@ -38,7 +38,7 @@ contract CryticToFoundry is Test, TargetFunctions, FoundryAsserts {
         vm.stopPrank();
     }
 
-    function testCoverage() public {
-        assertTrue(true, "of course it is true");
+    function testBobsSuperPowers() public {
+        // TODO: Given any target function and foundry assert, test your results
     }
 }

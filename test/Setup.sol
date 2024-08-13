@@ -8,7 +8,7 @@ import {Test, console2} from "forge-std/Test.sol";
 import {SystemConfig} from "../src/core/SystemConfig.sol";
 import {CapitalPool} from "../src/core/CapitalPool.sol";
 import {TokenManager} from "../src/core/TokenManager.sol";
-import {PreMarktes} from "../src/core/PreMarkets.sol";
+import "../src/core/PreMarkets.sol";
 import {DeliveryPlace} from "../src/core/DeliveryPlace.sol";
 import {TadleFactory} from "../src/factory/TadleFactory.sol";
 
@@ -22,8 +22,11 @@ import {MockERC20Token} from "./mocks/MockERC20Token.sol";
 import {MockERC20} from "./mocks/MockERC20.sol";
 import {WETH9} from "./mocks/WETH9.sol";
 import {UpgradeableProxy} from "../src/proxy/UpgradeableProxy.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-
+import "src/interfaces/ISystemConfig.sol";
+import {OfferLibraries} from "../src/libraries/OfferLibraries.sol";
+import {Constants} from "../src/libraries/Constants.sol";
 // import "src/storage/DeliveryPlaceStorage.sol";
 // import "src/utils/Rescuable.sol";
 // import "src/storage/UpgradeableStorage.sol";
@@ -33,7 +36,6 @@ import {UpgradeableProxy} from "../src/proxy/UpgradeableProxy.sol";
 // import "src/interfaces/IDeliveryPlace.sol";
 // import "src/utils/Errors.sol";
 // import "src/utils/Related.sol";
-// import "src/interfaces/ISystemConfig.sol";
 // import "src/interfaces/IWrappedNativeToken.sol";
 // import "src/factory/ITadleFactory.sol";
 // import "src/storage/PerMarketsStorage.sol";
@@ -60,6 +62,7 @@ interface IHevm {
 
 
 abstract contract Setup is BaseSetup {
+  using Math for uint256;
 
   IHevm hevm = IHevm(address(0x7109709ECfa91a80626fF3989D68f67F5b1DD12D));
 
@@ -214,7 +217,9 @@ abstract contract Setup is BaseSetup {
     // create market place
     systemConfig.createMarketPlace("Backpack", false);
     systemConfig.createMarketPlace("Frontpouch", false);
-    // vm.stopPrank();
+    
+    systemConfig.updateMarketPlaceStatus("Backpack", MarketPlaceStatus.Online);
+    systemConfig.updateMarketPlaceStatus("Frontpouch", MarketPlaceStatus.Online);
 
     marketPlaceOne = GenerateAddress.generateMarketPlaceAddress("Backpack");
     marketPlaceTwo = GenerateAddress.generateMarketPlaceAddress("Frontpouch");
@@ -272,4 +277,224 @@ abstract contract Setup is BaseSetup {
       hevm.deal(user, INITIAL_ETH_BALANCE * (10 ** weth.decimals())); // deal native eth
     }
   }
+
+  function getMarketPlaceInfoForOffer(address _offerAddr) internal view returns (MarketPlaceInfo memory) {
+    OfferInfo memory offerInfo = preMarktes.getOfferInfo(_offerAddr);
+    MakerInfo memory makerInfo = preMarktes.getMakerInfo(offerInfo.maker);
+    MarketPlaceInfo memory marketPlaceInfo = systemConfig.getMarketPlaceInfo(makerInfo.marketPlace);
+
+    return marketPlaceInfo;
+  }
+  
+  function getMarketPlaceInfoForStock(address _stockAddr) internal view returns (MarketPlaceInfo memory) {
+    StockInfo memory stockInfo = preMarktes.getStockInfo(_stockAddr);
+    MakerInfo memory makerInfo = preMarktes.getMakerInfo(stockInfo.maker);
+    MarketPlaceInfo memory marketPlaceInfo = systemConfig.getMarketPlaceInfo(makerInfo.marketPlace);
+
+    return marketPlaceInfo;
+  }
+
+  address[] cacheOffers;
+  function getOffersForMarketplace(address _marketPlace) internal returns (address[] memory) {
+    address[] memory offerAddress = preMarktes.getOfferAddresses();
+    address[] memory selectedOffers;
+    cacheOffers = new address[](0);
+
+
+    for( uint256 i = 0; i < offerAddress.length; i++) {
+        OfferInfo memory offerInfo = preMarktes.getOfferInfo(offerAddress[i]);
+        MakerInfo memory makerInfo = preMarktes.getMakerInfo(offerInfo.maker);
+        if (makerInfo.marketPlace == _marketPlace) {
+          cacheOffers.push(offerAddress[i]);
+        }
+    }
+    selectedOffers = cacheOffers;
+    return selectedOffers;
+  }
+
+
+  // @fuzz-note create getReceivedPT() function in Setup.sol to return the pointTokenAmount received by a Bidder when the offer is settled
+  // @fuzz-note create getInitialDepositForStock() function in Setup.sol
+  // @fuzz-note create getInitialDepositForOffer() function in Setup.sol
+
+  function getOneOfferWithVirginStatus() internal view returns (bool) {
+    address[] memory offerAddress = preMarktes.getOfferAddresses();
+    OfferInfo memory offerInfo;
+    for( uint256 i = 0; i < offerAddress.length; i++) {
+        offerInfo = preMarktes.getOfferInfo(offerAddress[i]);
+        if (offerInfo.offerStatus == OfferStatus.Virgin) {
+            return true;
+        }
+    }
+    return false;
+  }
+
+  // getOneStockWithInitializedStatus
+
+  function getOneStockWithInitializedStatus() internal view returns (bool) {
+    address[] memory stockAddress = preMarktes.getStockAddresses();
+    StockInfo memory stockInfo;
+    for( uint256 i = 0; i < stockAddress.length; i++) {
+        stockInfo = preMarktes.getStockInfo(stockAddress[i]);
+        if (stockInfo.stockStatus == StockStatus.Initialized) {
+            return true;
+        }
+    }
+    return false;
+  }
+
+  function getOfferCollateralAddress(address _offerAddr) internal view returns (address) {
+    OfferInfo memory offerInfo = preMarktes.getOfferInfo(_offerAddr);
+    MakerInfo memory makerInfo = preMarktes.getMakerInfo(offerInfo.maker);
+    return makerInfo.tokenAddress;
+  }
+
+  // @fuzz-note convertPointTokenToCollateralToken()
+  // Math.Rounding.Floor or Math.Rounding.Ceil
+  function convertPTToCT(uint256 _pointTokenAmount, address _offerAddr, address stockAddr, Math.Rounding _rounding) internal view returns (uint256) {
+    require(_offerAddr != address(0) && stockAddr != address(0), "Invalid offer address or stock address");
+
+    // get OfferInfo anf StockInfo
+    OfferInfo memory offerInfo = preMarktes.getOfferInfo(_offerAddr);
+    StockInfo memory stockInfo = preMarktes.getStockInfo(stockAddr);
+    MakerInfo memory makerInfo;
+    address collateralTokenAddress;
+    address pointTokenAddress;
+    uint256 tokenPerPoint;
+    uint256 collateralRate;
+    uint256 points;
+    uint256 CollateralToken;
+
+    if(_offerAddr != address(0)){
+      makerInfo = preMarktes.getMakerInfo(offerInfo.maker);
+    }else{
+      makerInfo = preMarktes.getMakerInfo(stockInfo.maker);
+      
+      if (makerInfo.offerSettleType == OfferSettleType.Protected || stockInfo.preOffer == address(0x0)){
+        offerInfo = preMarktes.getOfferInfo(stockInfo.offer);
+      }else{
+        offerInfo = preMarktes.getOfferInfo(makerInfo.originOffer);
+      }
+    }
+
+    // Get the marketPlaceInfo for the collateral token
+    MarketPlaceInfo memory marketPlaceInfo = systemConfig.getMarketPlaceInfo(makerInfo.marketPlace);
+
+    // Get pointTokenAddress and tokenPerPoint
+    pointTokenAddress = marketPlaceInfo.tokenAddress;
+    tokenPerPoint = marketPlaceInfo.tokenPerPoint;
+
+    // Get collateralTokenAddress 
+    collateralTokenAddress = makerInfo.tokenAddress;
+
+    // pointToken --> Points --> CollateralToken
+    points = _pointTokenAmount / tokenPerPoint;
+
+    // Use subject formula to get CollateralToken
+    // Taking the refund logic in settleAskMaker() to derive reference/rate from the offer
+    uint256 makerRefundAmount = OfferLibraries.getDepositAmount(offerInfo.offerType, offerInfo.collateralRate, offerInfo.amount, true, _rounding);
+
+    // if makerRefundAmount == offerInfo.points; and CollateralToken == points
+    // then CollateralToken = (makerRefundAmount * points) / offerInfo.points
+    CollateralToken = Math.mulDiv( makerRefundAmount, points, offerInfo.points, _rounding);
+
+    return CollateralToken;
+  }
+  
+
+  // @fuzz-note convertPointsToCollateralToken()
+  // Math.Rounding.Floor or Math.Rounding.Ceil
+  function convertPointsToCT(uint256 _point, address _offerAddr, address stockAddr, Math.Rounding _rounding) internal view returns (uint256) {
+    require(_offerAddr != address(0) && stockAddr != address(0), "Invalid offer address or stock address");
+
+    // get OfferInfo anf StockInfo
+    OfferInfo memory offerInfo = preMarktes.getOfferInfo(_offerAddr);
+    StockInfo memory stockInfo = preMarktes.getStockInfo(stockAddr);
+    MakerInfo memory makerInfo;
+    address collateralTokenAddress;
+    address pointTokenAddress;
+    uint256 tokenPerPoint;
+    uint256 collateralRate;
+    uint256 points = _point;
+    uint256 CollateralToken;
+
+    if(_offerAddr != address(0)){
+      makerInfo = preMarktes.getMakerInfo(offerInfo.maker);
+    }else{
+      makerInfo = preMarktes.getMakerInfo(stockInfo.maker);
+      
+      if (makerInfo.offerSettleType == OfferSettleType.Protected || stockInfo.preOffer == address(0x0)){
+        offerInfo = preMarktes.getOfferInfo(stockInfo.offer);
+      }else{
+        offerInfo = preMarktes.getOfferInfo(makerInfo.originOffer);
+      }
+    }
+
+    // Get the marketPlaceInfo for the collateral token
+    MarketPlaceInfo memory marketPlaceInfo = systemConfig.getMarketPlaceInfo(makerInfo.marketPlace);
+
+    // Get pointTokenAddress and tokenPerPoint
+    pointTokenAddress = marketPlaceInfo.tokenAddress;
+    tokenPerPoint = marketPlaceInfo.tokenPerPoint;
+
+    // Get collateralTokenAddress 
+    collateralTokenAddress = makerInfo.tokenAddress;
+
+    // Use subject formula to get CollateralToken
+    // Taking the refund logic in settleAskMaker() to derive reference/rate from the offer
+    uint256 makerRefundAmount = OfferLibraries.getDepositAmount(offerInfo.offerType, offerInfo.collateralRate, offerInfo.amount, true, _rounding);
+
+    // if makerRefundAmount == offerInfo.points; and CollateralToken == points
+    // then CollateralToken = (makerRefundAmount * points) / offerInfo.points
+    CollateralToken = Math.mulDiv( makerRefundAmount, points, offerInfo.points, _rounding);
+
+    return CollateralToken;
+  }
+
+  // convertPointsToPointToken(), and [convertCTToPT()]
+   
+  // @fuzz-note convertPointsToCollateralToken()
+  // Math.Rounding.Floor or Math.Rounding.Ceil
+  function convertPointsToCT(uint256 _point, address _offerAddr, address stockAddr) internal view returns (uint256) {
+    require(_offerAddr != address(0) && stockAddr != address(0), "Invalid offer address or stock address");
+
+    // get OfferInfo anf StockInfo
+    OfferInfo memory offerInfo = preMarktes.getOfferInfo(_offerAddr);
+    StockInfo memory stockInfo = preMarktes.getStockInfo(stockAddr);
+    MakerInfo memory makerInfo;
+    address collateralTokenAddress;
+    address pointTokenAddress;
+    uint256 tokenPerPoint;
+    uint256 collateralRate;
+    uint256 pointTokenAmount;
+
+    if(_offerAddr != address(0)){
+      makerInfo = preMarktes.getMakerInfo(offerInfo.maker);
+    }else{
+      makerInfo = preMarktes.getMakerInfo(stockInfo.maker);
+      
+      if (makerInfo.offerSettleType == OfferSettleType.Protected || stockInfo.preOffer == address(0x0)){
+        offerInfo = preMarktes.getOfferInfo(stockInfo.offer);
+      }else{
+        offerInfo = preMarktes.getOfferInfo(makerInfo.originOffer);
+      }
+    }
+
+    // Get the marketPlaceInfo for the collateral token
+    MarketPlaceInfo memory marketPlaceInfo = systemConfig.getMarketPlaceInfo(makerInfo.marketPlace);
+
+    // Get pointTokenAddress and tokenPerPoint
+    pointTokenAddress = marketPlaceInfo.tokenAddress;
+    tokenPerPoint = marketPlaceInfo.tokenPerPoint;
+
+    // Get collateralTokenAddress 
+    collateralTokenAddress = makerInfo.tokenAddress;
+
+    // pointToken --> Points --> CollateralToken
+    pointTokenAmount = tokenPerPoint * _point;
+
+    return pointTokenAmount;
+  }
+
+
 }

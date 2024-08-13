@@ -1,0 +1,91 @@
+# Project_X Test Suite Guide
+
+## Setup
+
+**Clone this repo:** https://github.com/Renzo1/tadle_02.git
+
+```bash
+git clone https://github.com/Renzo1/tadle_02.git
+```
+
+&nbsp;  
+**Install OpenZeppelin:**
+
+```bash
+forge install OpenZeppelin/openzeppelin-contracts
+```
+
+&nbsp;  
+**Install chimera:**
+
+```bash
+forge install Recon-Fuzz/chimera --no-commit
+```
+
+&nbsp;  
+**compile project:**
+
+```bash
+forge build
+```
+
+## Stateless Fuzzing
+
+**For Single forge test:**
+
+```bash
+forge test --match-test "testName" -vvv
+```
+
+&nbsp;  
+**For All forge test:**
+
+```bash
+forge test -vvv
+```
+
+## Stateful Fuzzing
+
+### Run the following command from base directory:
+
+**For Echidna:**
+
+```
+echidna . --contract CryticTester --config echidna.yaml
+```
+
+&nbsp;  
+**For Echidna:**
+
+```
+medusa fuzz
+
+```
+&nbsp; 
+## Test Counts
+- No. of Formulated Invariants: 120+
+- No. of Implemented Invariants: 2
+- No. of Implemented PoCs: 0
+
+&nbsp; 
+## Modifications to Original Contract
+**Added getter functions**
+- getOfferAddresses() public view returns (address[] memory)
+- getStockAddresses() public view returns (address[] memory) 
+- getMakerAddresses() public view returns (address[] memory) 
+
+**Added variables**
+- ReturnAddresses struct in src/core/PreMarkets.sol
+- offerAddresses, stockAddresses, and makerAddresses address[] in src/storage/PerMarketsStorage.sol
+
+**Function modifications**
+- createOffer:
+  - Push generated addresses to offerAddresses, stockAddresses, and makerAddresses arrays
+  - Added return functionality for ReturnAddresses datatype
+- createTaker:
+  - Push generated addresses to stockAddresses
+  - Added return functionality for address datatype
+  - Commented out event emission to prevent stack-too-deep error
+- listOffer:
+  - Push generated addresses to offerAddresses
+  - Added return functionality for address datatype

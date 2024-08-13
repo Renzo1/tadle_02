@@ -36,7 +36,8 @@ contract PreMarktes is PerMarketsStorage, Rescuable, Related, IPerMarkets {
      * @dev params must be valid, details in CreateOfferParams
      * @dev points and amount must be greater than 0
      */
-    function createOffer(CreateOfferParams calldata params) external payable {
+    // NOTE Audit: added return functionality
+    function createOffer(CreateOfferParams calldata params) external payable returns (ReturnAddresses memory) {
         /**
          * @dev points and amount must be greater than 0
          * @dev eachTradeTax must be less than 100%, decimal scaler is 10000
@@ -155,10 +156,12 @@ contract PreMarktes is PerMarketsStorage, Rescuable, Related, IPerMarkets {
             params.amount
         );
 
-        // NOTE Auditors Harness
+        // NOTE Auditors Pseudo-harnesses
         offerAddresses.push(offerAddr);
         stockAddresses.push(stockAddr);
         makerAddresses.push(makerAddr);
+
+        return ReturnAddresses(makerAddr, offerAddr,stockAddr);
     }
 
     /**
@@ -166,7 +169,8 @@ contract PreMarktes is PerMarketsStorage, Rescuable, Related, IPerMarkets {
      * @param _offer offer address
      * @param _points points
      */
-    function createTaker(address _offer, uint256 _points) external payable {
+    // NOTE Audit: added return functionality
+    function createTaker(address _offer, uint256 _points) external payable returns (address) {
         /**
          * @dev offer must be virgin
          * @dev points must be greater than 0
@@ -276,19 +280,22 @@ contract PreMarktes is PerMarketsStorage, Rescuable, Related, IPerMarkets {
             tokenManager
         );
 
-        /// @dev emit CreateTaker
-        emit CreateTaker(
-            _offer,
-            msg.sender,
-            stockAddr,
-            _points,
-            depositAmount,
-            tradeTax,
-            remainingPlatformFee
-        );
+        // NOTE Audit: commented out emit
+        // /// @dev emit CreateTaker
+        // emit CreateTaker(
+        //     _offer,
+        //     msg.sender,
+        //     stockAddr,
+        //     _points,
+        //     depositAmount,
+        //     tradeTax,
+        //     remainingPlatformFee
+        // );
 
-        // NOTE Auditors Harness
+        // NOTE Auditors Harnesses
         stockAddresses.push(stockAddr);
+
+        return (stockAddr);
     }
 
     /**
@@ -300,11 +307,12 @@ contract PreMarktes is PerMarketsStorage, Rescuable, Related, IPerMarkets {
      * @dev Market place must be online
      * @dev Only ask offer can be listed
      */
+    // NOTE Audit: added return functionality
     function listOffer(
         address _stock,
         uint256 _amount,
         uint256 _collateralRate
-    ) external payable {
+    ) external payable returns(address) {
         if (_amount == 0x0) {
             revert Errors.AmountIsZero();
         }
@@ -401,6 +409,11 @@ contract PreMarktes is PerMarketsStorage, Rescuable, Related, IPerMarkets {
             stockInfo.points,
             _amount
         );
+
+        // NOTE Auditors Harnesses
+        offerAddresses.push(offerAddr);
+
+        return (offerAddr);
     }
 
     /**
@@ -970,5 +983,11 @@ contract PreMarktes is PerMarketsStorage, Rescuable, Related, IPerMarkets {
 
     function getMakerAddresses() public view returns (address[] memory) {
         return makerAddresses;
+    }
+
+    struct ReturnAddresses {
+        address makerAddr;
+        address offerAddr;
+        address stockAddr;
     }
 }

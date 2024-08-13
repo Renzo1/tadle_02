@@ -140,3 +140,15 @@ forge test -vvv
 No known issues reported
 
 [//]: # (known-issues-close)
+
+
+&nbsp;
+&nbsp;
+&nbsp;
+# Auditors Note
+
+> [!NOTE]
+> This repo is a slightly modified version of the [original codebase](https://github.com/Cyfrin/2024-08-tadle). 
+> This modifications are necessary for effective testing and PoC development.  
+> The modification are merely additions of getter functions and returning of key variable from functions.
+> See `test/README.md` for a list of all the modifications made. Audit comments describing these changes are also left in the codebase where necessary.
